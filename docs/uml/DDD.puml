@@ -1,0 +1,92 @@
+@startuml
+
+hide circle
+hide method
+
+title Modèle selon le domaine (DDD)
+
+package "Maison mère" <<Frame>> {
+  class Employe {
+    -id: int
+    -nom: string
+    -role: string
+    -email: string
+    -dateEmbauche: date
+  }
+  
+  class Transaction {
+    -id: int
+    -total: float
+    -type: string
+    -date: datetime
+    -employeId: int
+    -caisseId: int
+    -statut: string
+  }
+  
+  class DBMere {
+    -host: string
+    -port: int
+    -database: string
+    -username: string
+    -password: string
+  }
+}
+
+package "Magasin" <<Frame>> {
+  class Caisse {
+    -id: int
+    -nom: string
+    -statut: string
+    -magasinId: int
+  }
+  
+  class Panier {
+    -id: int
+    -caisseId: int
+    -dateCreation: datetime
+  }
+  
+  class DBMagasin {
+    -host: string
+    -port: int
+    -database: string
+    -username: string
+    -password: string
+  }
+}
+
+package "Centre de logistique" <<Frame>> {
+  class Produit {
+    -id: int
+    -nom: string
+    -prix: float
+    -categorie: string
+    -quantite: int
+    -seuilAlerte: int
+    -description: string
+  }
+  
+  class DBProduit {
+    -host: string
+    -port: int
+    -database: string
+    -username: string
+    -password: string
+  }
+}
+
+' Relations entre entités
+Employe ||--o{ Transaction : "effectue"
+Caisse ||--o{ Transaction : "traite"
+Transaction ||--o{ Produit : "contient"
+Panier ||--o{ Produit : "inclut"
+
+' Relations avec les bases de données
+DBMere ||--o{ Employe : "persiste"
+DBMere ||--o{ Transaction : "persiste"
+DBMagasin ||--o{ Caisse : "persiste"
+DBMagasin ||--o{ Panier : "persiste"
+DBProduit ||--o{ Produit : "persiste"
+
+@enduml

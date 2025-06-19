@@ -1,0 +1,32 @@
+@startuml
+skinparam componentStyle uml2
+
+rectangle "Server Side" {
+    component "PostgreSQL" <<Database>> as pg
+    component "Docker" <<Container>> as docker
+    component "Go Fiber" <<Web Framework>> as fiber
+    component "GORM" <<ORM>> as orm
+}
+
+rectangle "Client Side" {
+    component "Browser" << internet browser >> as bs
+    component "HTTP Client" <<API Client>> as http
+}
+
+rectangle "External Services" {
+    component "Docker Hub" <<Registry>> as hub
+}
+
+' Server side connections
+[docker] -- [pg] : <<hosts>>
+[fiber] -- [orm] : <<uses>>
+[orm] -- [pg] : <<connects to>>
+
+' Client side connections
+[bs] -- [http] : <<uses>>
+[http] -- [fiber] : <<HTTP requests>>
+
+' External connections
+[docker] -- [hub] : <<pulls from>>
+
+@enduml

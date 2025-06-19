@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  magasin:
+    build:
+      context: .
+      dockerfile: ./caisse_app_scaled/magasin/Dockerfile
+    image: ${USERNAME}/caisse-app-magasin:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - dbmagasin
+  
+  logistique:
+    build:
+      context: .
+      dockerfile: ./caisse_app_scaled/centre_logistique/Dockerfile
+    image: ${USERNAME}/caisse-app-logistique:latest
+    ports:
+      - "8091:8091"
+    depends_on:
+      - dblogistique
+  
+  mere:
+    build:
+      context: .
+      dockerfile: ./caisse_app_scaled/maison_mere/Dockerfile
+    image: ${USERNAME}/caisse-app-mere:latest
+    ports:
+      - "8090:8090"
+    depends_on:
+      - dbMere
+      
+  dbmagasin:
+    image: postgres:15
+    container_name: magasin_db
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_magasin:/var/lib/postgresql/data
+      - ./initMagasin.sql:/docker-entrypoint-initdb.d/initMagasin.sql
+  
+  dblogistique:
+    image: postgres:15
+    container_name: logistic_db
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_logistique:/var/lib/postgresql/data
+      - ./initLogistique.sql:/docker-entrypoint-initdb.d/initLogistique.sql
+
+  dbMere:
+    image: postgres:15
+    container_name: mere_db
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_mere:/var/lib/postgresql/data
+      - ./initMere.sql:/docker-entrypoint-initdb.d/initMere.sql
+  
+  dbtest:
+    image: postgres:15
+    container_name: caisse_db_test
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data_test:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data_magasin:
+  postgres_data_logistique:
+  postgres_data_mere:
+  postgres_data_test:

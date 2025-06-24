@@ -27,7 +27,10 @@ jobs:
 
       - name: Add Go bin to PATH
         run: echo "${HOME}/go/bin" >> $GITHUB_PATH
-
+      - name: pwd
+        run: |
+          pwd
+          ls -la
       - name: Run linter
         run: |
           find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
@@ -60,7 +63,10 @@ jobs:
       - name: Initialize database
         run: |
           PGPASSWORD=test_password psql -h localhost -p 5435 -U test_user -d postgres -f init.sql
-
+      - name: pwd
+        run: |
+          pwd
+          ls -la
       - name: Run tests
         run: |
           find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +

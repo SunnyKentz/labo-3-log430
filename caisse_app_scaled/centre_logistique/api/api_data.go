@@ -4,7 +4,7 @@ import (
 	"caisse-app-scaled/caisse_app_scaled/centre_logistique/logistics"
 	. "caisse-app-scaled/caisse_app_scaled/utils"
 
-//	_ "caisse-app-scaled/docs/swagger/logistique"
+	_ "caisse-app-scaled/docs/swagger/logistique"
 	"errors"
 	"net/http"
 	"net/url"

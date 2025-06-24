@@ -1,6 +1,7 @@
 package logistics
 
 import (
+	"caisse-app-scaled/caisse_app_scaled/auth"
 	"caisse-app-scaled/caisse_app_scaled/centre_logistique/db"
 	"caisse-app-scaled/caisse_app_scaled/logger"
 	"caisse-app-scaled/caisse_app_scaled/models"
@@ -28,17 +29,19 @@ func Nom() (string, error) {
 	return nom, nil
 }
 
-func Login(n string) bool {
-	resp, err := http.PostForm(API_MERE+"/api/login", map[string][]string{
-		"username": {n},
-	})
-	if err != nil {
-		logger.Error("Erreur lors de la connexion: " + err.Error())
-		return false
+func Login(n string, pw string) (string, error) {
+	if auth.IsUsernameValid(nom) && auth.IsUserPasswordValid(nom, pw) {
+		return auth.CreateJWT(nom)
 	}
-	defer resp.Body.Close()
-	nom = n
-	return !(resp.StatusCode >= 400)
+	return "", errors.New("failed to login")
+}
+
+func CheckLogedIn(jwt string) error {
+	_, err := auth.ValidateJWT(jwt)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func GetAllCommands() []Commande {
@@ -48,6 +51,7 @@ func AjouterUneCommande(produitID int, magasin string, host string) {
 	newId := len(commandes) + 1
 	prod, _ := db.GetProduitParID(produitID)
 	message := magasin + " demande une réaprovisionement de 10 " + prod.Nom
+	logger.Info(message)
 	commandes = append(commandes, Commande{
 		Id:        newId,
 		ProduitID: produitID,
@@ -61,7 +65,7 @@ func AccepterUneCommande(id int) bool {
 		if cmd.Id == id {
 			err := db.MettreAJourQuantite(cmd.ProduitID, -10)
 			Errnotnil(err)
-			req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("http://%s/api/produit/%d/%d", cmd.Host, cmd.ProduitID, 10), nil)
+			req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("http://%s/api/v1/produit/%d/%d", cmd.Host, cmd.ProduitID, 10), nil)
 			if err != nil {
 				logger.Error("Erreur lors de la création de la requête: " + err.Error())
 				return false

@@ -2,6 +2,7 @@ package caissier
 
 import (
 	"bytes"
+	"caisse-app-scaled/caisse_app_scaled/auth"
 	"caisse-app-scaled/caisse_app_scaled/logger"
 	"caisse-app-scaled/caisse_app_scaled/magasin/db"
 	"caisse-app-scaled/caisse_app_scaled/models"
@@ -16,42 +17,39 @@ import (
 )
 
 type caissier struct {
-	Nom  string
-	cart []models.Produit
+	Nom     string
+	Magasin string
+	cart    []models.Produit
 }
 
 var instance *caissier
 var once sync.Once
-var Magasin string = "Magasin 1"
 var Host string
 
-func InitialiserPOS(nom string, nomCaisse string) bool {
-	if !login(nom) {
-		return false
-	}
+func InitialiserPOS(nom string, nomCaisse string, magasin string) bool {
+	logger.Init(nom)
 	// subscribe to mere, POST {"host":Host} to API_MERE/subscribe
 	subscribeData := map[string]string{"host": "http://" + Host}
 	jsonData, err := json.Marshal(subscribeData)
 	if err != nil {
-		log.Println("Erreur lors de la sérialisation des données: " + err.Error())
+		logger.Error("Erreur lors de la sérialisation des données: " + err.Error())
 		return false
 	}
 
-	resp, err := http.Post(API_MERE+"/api/subscribe", "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(API_MERE()+"/api/v1/subscribe", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Println("Erreur lors de la souscription à la mère: " + err.Error())
+		logger.Error("Erreur lors de la souscription à la mère: " + err.Error())
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println("Erreur lors de la notification à la mère, status: " + fmt.Sprint(resp.StatusCode))
+		logger.Error("Erreur lors de la notification à la mère, status: " + fmt.Sprint(resp.StatusCode))
 		return false
 	}
 
 	once.Do(func() {
 		db.Init()
-		logger.Init(nom)
 		db.SetupLog()
 	})
 	available := db.GetCaissier(nomCaisse)
@@ -64,7 +62,6 @@ func InitialiserPOS(nom string, nomCaisse string) bool {
 		logger.Error("Erreur aucune caisse disponible")
 		return false
 	}
-	logger.Init(nom)
 
 	// Occuper la caisse
 	if err := db.OccuperCaisse(nom); err != nil {
@@ -73,8 +70,9 @@ func InitialiserPOS(nom string, nomCaisse string) bool {
 	}
 
 	instance = &caissier{
-		Nom:  nom,
-		cart: make([]models.Produit, 0),
+		Nom:     nom,
+		Magasin: magasin,
+		cart:    make([]models.Produit, 0),
 	}
 	return true
 }
@@ -85,18 +83,23 @@ func Nom() (string, error) {
 	}
 	return "", fmt.Errorf("no instances")
 }
-func login(nom string) bool {
-	resp, err := http.PostForm(API_MERE+"/api/login", map[string][]string{
-		"username": {nom},
-		"role":     {"commis"},
-	})
-	if err != nil {
-		log.Println("Erreur lors de la connexion: " + err.Error())
-		return false
+func Login(nom string, pw string) (string, error) {
+	if auth.IsUsernameValid(nom) && auth.IsUserPasswordValid(nom, pw) {
+		return auth.CreateJWT(nom)
 	}
-	defer resp.Body.Close()
-	return resp.StatusCode == 200
+	return "", errors.New("failed to login")
 }
+func CheckLogedIn(jwt string, magasin string, caisse string) error {
+	username, err := auth.ValidateJWT(jwt)
+	if err != nil {
+		return err
+	}
+	if instance == nil && !InitialiserPOS(username, caisse, magasin) {
+		return errors.New("echec d'ouverture de la caisse")
+	}
+	return nil
+}
+
 func FermerPOS() {
 	if instance != nil {
 		err := db.LibererCaisse(instance.Nom)
@@ -111,7 +114,7 @@ func AfficherProduits() ([]models.Produit, error) {
 func AfficherTransactions() []models.Transaction {
 	//recuperer les transactions
 
-	resp, err := http.Get(API_MERE + "/api/transactions")
+	resp, err := http.Get(API_MERE() + "/api/v1/transactions")
 	if err != nil {
 		logger.Error("Erreur lors de la requête: " + err.Error())
 		return nil
@@ -142,7 +145,7 @@ func AjouterALaCart(produitID int) error {
 		return err
 	}
 	if produit.Quantite <= QuantiteDansLaCart(produitID) {
-		return errors.New("Produit insuffisant")
+		return errors.New("produit insuffisant")
 	}
 	instance.cart = append(instance.cart, *produit)
 
@@ -220,7 +223,7 @@ func DemmandeReapprovisionner(produitID int) {
 		logger.Error("Erreur lors de la sérialisation: " + err.Error())
 		return
 	}
-	_, err = http.Post(fmt.Sprintf(API_LOGISTIC+"/api/commande/%s/%d", Magasin, produitID), "application/json", bytes.NewBuffer(jsonData))
+	_, err = http.Post(fmt.Sprintf(API_LOGISTIC()+"/api/v1/commande/%s/%d", instance.Magasin, produitID), "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		logger.Error("Erreur lors de l'envoi de la transaction: " + err.Error())
 	}
@@ -229,6 +232,9 @@ func DemmandeReapprovisionner(produitID int) {
 func FaireUneVente() error {
 	produitIDs := ""
 	total := 0.0
+	if len(instance.cart) < 1 {
+		return errors.New("empty cart")
+	}
 	for i, p := range instance.cart {
 		if i > 0 {
 			produitIDs += ","
@@ -244,7 +250,7 @@ func FaireUneVente() error {
 		"type":          "VENTE",
 		"produit_ids":   produitIDs,
 		"montant":       total,
-		"magasin":       Magasin,
+		"magasin":       instance.Magasin,
 		"deja_retourne": false,
 	}
 
@@ -256,7 +262,7 @@ func FaireUneVente() error {
 	}
 
 	// Send POST request
-	resp, err := http.Post(API_MERE+"/api/transactions", "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(API_MERE()+"/api/v1/transactions", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		logger.Error("Erreur lors de l'envoi de la transaction: " + err.Error())
 		return err
@@ -275,7 +281,7 @@ func FaireUneVente() error {
 		Date:       time.Now(),
 	}
 	logger.Transaction(&t, "Vente effectuée")
-	err = db.MettreAJourQuantiteParTrnasaction(&t, Magasin)
+	err = db.MettreAJourQuantiteParTrnasaction(&t, instance.Magasin)
 	Errnotnil(err)
 	instance.cart = make([]models.Produit, 0)
 	return nil
@@ -283,7 +289,7 @@ func FaireUneVente() error {
 }
 
 func GetTransactionByID(transactionID int) (models.Transaction, error) {
-	resp, err := http.Get(fmt.Sprintf(API_MERE+"/api/transactions/%d", transactionID))
+	resp, err := http.Get(fmt.Sprintf(API_MERE()+"/api/v1/transactions/%d", transactionID))
 	if err != nil {
 		return models.Transaction{}, err
 	}
@@ -313,7 +319,7 @@ func FaireUnRetour(transactionID int) error {
 
 	// Make HTTP request to delete transaction
 	client := &http.Client{}
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf(API_MERE+"/api/transactions/%d", transactionID), nil)
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf(API_MERE()+"/api/v1/transactions/%d", transactionID), nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Error("Erreur lors du retour: " + err.Error())
@@ -334,7 +340,7 @@ func FaireUnRetour(transactionID int) error {
 		Montant:    -transaction.Montant,
 		Date:       time.Now(),
 	}
-	err = db.MettreAJourQuantiteParTrnasaction(returnTransaction, Magasin)
+	err = db.MettreAJourQuantiteParTrnasaction(returnTransaction, instance.Magasin)
 	Errnotnil(err)
 	// Log the return transaction
 	logger.Transaction(returnTransaction, "Retour effectué")

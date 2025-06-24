@@ -4,41 +4,35 @@ import (
 	"caisse-app-scaled/caisse_app_scaled/centre_logistique/db"
 	"caisse-app-scaled/caisse_app_scaled/centre_logistique/logistics"
 	"caisse-app-scaled/caisse_app_scaled/logger"
+	. "caisse-app-scaled/caisse_app_scaled/utils"
 	"log"
-	"os"
+	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/template/html/v2"
 )
 
 func NewApp() {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		log.Fatal("Error getting working directory:", err)
-	}
-	log.Println("Working directory:", workingDir)
 	engine := html.New("./view", ".html")
 	app := fiber.New(fiber.Config{
 		Views: engine,
 	})
 
+	app.Use(cors.New(cors.Config{
+		AllowOriginsFunc: func(origin string) bool {
+			return false
+		},
+	}))
+
 	app.Static("/static", "./view")
-	app.Mount("/api", newDataApi())
+	app.Static("/js", "./commonjs")
+	app.Mount("/api/v1", newDataApi())
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("login", fiber.Map{
-			"Title": "Login - Caisse App",
-		})
+		return c.Render("login", nil)
 	})
-
-	app.Post("/login", func(c *fiber.Ctx) error {
-		employe := c.FormValue("username")
-		if !logistics.Login(employe) {
-			return c.Status(400).Render("login", nil)
-		}
-		return c.Redirect("/home", 302)
-	})
-
-	app.Get("/home", authMiddleWare, func(c *fiber.Ctx) error {
+	app.Get("/home", func(c *fiber.Ctx) error {
 		return c.Render("commande", nil)
 	})
 	db.Init()
@@ -48,7 +42,15 @@ func NewApp() {
 }
 
 func authMiddleWare(c *fiber.Ctx) error {
-	if _, err := logistics.Nom(); err != nil && c.Path() != "/login" {
+	authHeader := c.Get("Authorization")
+	err := logistics.CheckLogedIn(authHeader)
+	if err != nil {
+		if c.Path() == "api/v1/login" {
+			return c.Next()
+		}
+		if strings.HasPrefix(c.Path(), "/api") {
+			return GetApiError(c, "this action requires authentification", http.StatusUnauthorized)
+		}
 		return c.Redirect("/")
 	}
 	return c.Next()

@@ -18,6 +18,8 @@ type dbProxy struct {
 	db       *gorm.DB
 	username string
 	password string
+	host     string
+	port     string
 }
 
 var (
@@ -30,6 +32,8 @@ func Init() {
 		instance = &dbProxy{
 			username: os.Getenv("DB_USER"),
 			password: os.Getenv("DB_PASSWORD"),
+			port:     os.Getenv("DB_PORT"),
+			host:     os.Getenv("GATEWAY"),
 		}
 		instance.connect()
 	})
@@ -37,8 +41,8 @@ func Init() {
 
 func (d *dbProxy) connect() {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("GATEWAY"),
-		os.Getenv("DB_PORT"), //5433
+		instance.host,
+		instance.port, //5434
 		instance.username,
 		instance.password,
 		"postgres",

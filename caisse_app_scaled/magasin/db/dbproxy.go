@@ -24,6 +24,8 @@ type dbProxy struct {
 	db       *gorm.DB
 	username string
 	password string
+	host     string
+	port     string
 }
 
 var (
@@ -36,6 +38,8 @@ func Init() {
 		instance = &dbProxy{
 			username: os.Getenv("DB_USER"),
 			password: os.Getenv("DB_PASSWORD"),
+			port:     os.Getenv("DB_PORT"),
+			host:     os.Getenv("GATEWAY"), //172.17.0.1
 		}
 		instance.connect()
 	})
@@ -43,8 +47,8 @@ func Init() {
 
 func (d *dbProxy) connect() {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("GATEWAY"),
-		os.Getenv("DB_PORT"), //5432
+		instance.host,
+		instance.port, //5434
 		instance.username,
 		instance.password,
 		"postgres",
@@ -181,6 +185,6 @@ func MettreAJourQuantiteParTrnasaction(t *models.Transaction, magasinNom string)
 func notifyMere(s string) {
 	s = "{\"message\":\"" + s + "\"}"
 
-	_, err := http.Post(API_MERE+"/api/notify", "application/json", bytes.NewBuffer([]byte(s)))
+	_, err := http.Post(API_MERE()+"/api/v1/notify", "application/json", bytes.NewBuffer([]byte(s)))
 	Errnotnil(err)
 }

@@ -2,6 +2,7 @@ package mere
 
 import (
 	"bytes"
+	"caisse-app-scaled/caisse_app_scaled/auth"
 	"caisse-app-scaled/caisse_app_scaled/logger"
 	"caisse-app-scaled/caisse_app_scaled/maison_mere/db"
 	"caisse-app-scaled/caisse_app_scaled/models"
@@ -18,7 +19,8 @@ import (
 
 var nom *string
 var Notifications []string = []string{}
-var Magasins []string = []string{API_LOGISTIC}
+
+var Magasins []string = []string{API_LOGISTIC()}
 
 func Login(employe string, role string) bool {
 	available := false
@@ -32,6 +34,26 @@ func Login(employe string, role string) bool {
 		return true
 	}
 	return false
+}
+
+func LoginMere(employe string, pw string) (string, error) {
+	available := db.GetEmploye(employe, "manager")
+	if !available {
+		return "", errors.New("failed to login")
+	}
+	if auth.IsUserPasswordValid(employe, pw) {
+		nom = &employe
+		return auth.CreateJWT(employe)
+	}
+	return "", errors.New("failed to login")
+}
+
+func CheckLogedIn(jwt string) error {
+	_, err := auth.ValidateJWT(jwt)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Nom() (string, error) {
@@ -218,7 +240,7 @@ func GetRaportMagasin(mag string) (float64, []string, map[string]int) {
 }
 
 func getProduitParID(id int) (models.Produit, error) {
-	resp, err := http.Get(API_LOGISTIC + "/api/produits/id/" + strconv.Itoa(id))
+	resp, err := http.Get(API_LOGISTIC() + "/api/v1/produits/id/" + strconv.Itoa(id))
 	if err != nil {
 		return models.Produit{}, err
 	}
@@ -231,7 +253,7 @@ func getProduitParID(id int) (models.Produit, error) {
 	return produits, nil
 }
 func TrouverProduit(nom string) ([]models.Produit, error) {
-	resp, err := http.Get(API_LOGISTIC + "/api/produits/" + nom)
+	resp, err := http.Get(API_LOGISTIC() + "/api/v1/produits/" + nom)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +283,7 @@ func MiseAJourProduit(id int, nom string, prix float64, description string) erro
 		}
 
 		// Send PUT request to each magasin
-		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/produit/%d", magasin, id), bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/v1/produit/%d", magasin, id), bytes.NewBuffer(jsonData))
 		if err != nil {
 			logger.Error("Erreur lors de la création de la requête: " + err.Error())
 			continue

@@ -8,14 +8,22 @@ On peut login avec Bob en tant que manager et Alice en tant que commis
 le nom du magasin peut etre nimporte quoi
 la caisse doit etre Caisse 1, Caisse 2 ou Caisse 3
 
+le mdp est toujour : password
+
 ### Comment run :
 ```
+    make dev-setup
     make run
 ```
 
 ### Comment tester :
 ```
     make test
+```
+
+### Comment generer les docs :
+```
+    make docs
 ```
 
 ### Explication du CI

@@ -69,9 +69,9 @@ jobs:
           ls -la
       - name: Run tests
         run: |
-          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+          find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
           go test -v ./tests/...
-          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
+          find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
 
   build-and-push:
     needs: [test, lint]

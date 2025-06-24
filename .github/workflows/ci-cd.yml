@@ -29,7 +29,10 @@ jobs:
         run: echo "${HOME}/go/bin" >> $GITHUB_PATH
 
       - name: Run linter
-        run: golangci-lint run ./...
+        run: |
+          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+          golangci-lint run ./...
+          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
 
   test:
     runs-on: ubuntu-latest
@@ -59,7 +62,10 @@ jobs:
           PGPASSWORD=test_password psql -h localhost -p 5435 -U test_user -d postgres -f init.sql
 
       - name: Run tests
-        run: go test -v ./tests/...
+        run: |
+          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+          go test -v ./tests/...
+          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
 
   build-and-push:
     needs: [test, lint]

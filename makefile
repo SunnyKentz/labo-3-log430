@@ -69,8 +69,8 @@ clean:
 
 dev-setup:
 	echo $(PWD) | docker login -u $(USERNAME) --password-stdin
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go mod tidy
+	go get github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(MAKE) docs
 
 tag:

@@ -27,16 +27,12 @@ jobs:
 
       - name: Add Go bin to PATH
         run: echo "${HOME}/go/bin" >> $GITHUB_PATH
-      - name: pwd
-        run: |
-          pwd
-          ls -la
+
       - name: Run linter
         run: |
-          ls
-          find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+          find caisse_app_scaled -type f -exec sed -i 's|^\(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|// \1|' {} +
           golangci-lint run ./...
-          find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
+          find caisse_app_scaled -type f -exec sed -i 's|^// \(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|\1|' {} +
 
   test:
     runs-on: ubuntu-latest
@@ -64,16 +60,12 @@ jobs:
       - name: Initialize database
         run: |
           PGPASSWORD=test_password psql -h localhost -p 5435 -U test_user -d postgres -f init.sql
-      - name: pwd
-        run: |
-          pwd
-          ls -la
+
       - name: Run tests
         run: |
-          ls
-          find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+          find caisse_app_scaled -type f -exec sed -i 's|^\(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|// \1|' {} +
           go test -v ./tests/...
-          find ./caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
+          find caisse_app_scaled -type f -exec sed -i 's|^// \(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|\1|' {} +
 
   build-and-push:
     needs: [test, lint]

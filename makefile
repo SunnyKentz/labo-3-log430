@@ -48,11 +48,11 @@ run-local:
 
 test:
 	$(MAKE) clean
-	find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} +
+	$(MAKE) comment-swagger
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint run
 	docker-compose up -d --build dbtest
 	go test -v ./tests/...
-	find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} +
+	$(MAKE) unComment-swagger
 
 docs: .FORCE
 	go get github.com/swaggo/swag/cmd/swag@latest
@@ -73,7 +73,16 @@ dev-setup:
 	go get github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(MAKE) docs
 
-tag:
-	@read -p "Enter tag to push: " tag; git push origin $$tag
+comment-swagger:
+# ubuntu
+	find caisse_app_scaled -type f -exec sed -i 's|^\(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|// \1|' {} + ||true
+# mac
+	find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^/\/\//g' {} + ||true
+
+unComment-swagger:
+# ubuntu
+	find caisse_app_scaled -type f -exec sed -i 's|^// \(\s*_ "caisse-app-scaled/docs/swagger/logistique"\)|\1|' {} + ||true
+# mac
+	find caisse_app_scaled -type f -exec sed -i '' '/_ "caisse-app-scaled\/docs\/swagger/s/^\/\///g' {} + ||true
 
 .FORCE:

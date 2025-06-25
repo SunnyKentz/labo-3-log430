@@ -6,7 +6,7 @@ import (
 	"caisse-app-scaled/caisse_app_scaled/models"
 	. "caisse-app-scaled/caisse_app_scaled/utils"
 
-	_ "caisse-app-scaled/docs/swagger/mere"
+//	_ "caisse-app-scaled/docs/swagger/mere"
 	"errors"
 	"net/http"
 	"net/url"

@@ -8,7 +8,7 @@ services:
       - "8080:8080"
     depends_on:
       - dbmagasin
-  
+
   logistique:
     build:
       context: .
@@ -18,7 +18,7 @@ services:
       - "8091:8091"
     depends_on:
       - dblogistique
-  
+
   mere:
     build:
       context: .
@@ -28,7 +28,7 @@ services:
       - "8090:8090"
     depends_on:
       - dbMere
-      
+
   dbmagasin:
     image: postgres:15
     container_name: magasin_db
@@ -41,7 +41,7 @@ services:
     volumes:
       - postgres_data_magasin:/var/lib/postgresql/data
       - ./initMagasin.sql:/docker-entrypoint-initdb.d/initMagasin.sql
-  
+
   dblogistique:
     image: postgres:15
     container_name: logistic_db
@@ -67,7 +67,7 @@ services:
     volumes:
       - postgres_data_mere:/var/lib/postgresql/data
       - ./initMere.sql:/docker-entrypoint-initdb.d/initMere.sql
-  
+
   dbtest:
     image: postgres:15
     container_name: caisse_db_test
@@ -80,6 +80,12 @@ services:
     volumes:
       - postgres_data_test:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  githubActionsTest:
+    build:
+      context: .
+      dockerfile: ./.github/workflows/Dockerfile
+    image: github-test
 
 volumes:
   postgres_data_magasin:

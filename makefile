@@ -48,6 +48,7 @@ run-local:
 
 test:
 	$(MAKE) clean
+	go get github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(MAKE) comment-swagger
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint run
 	docker-compose up -d --build dbtest
@@ -70,7 +71,6 @@ clean:
 dev-setup:
 	echo $(PWD) | docker login -u $(USERNAME) --password-stdin
 	go mod tidy
-	go get github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	$(MAKE) docs
 
 comment-swagger:
